@@ -1,0 +1,133 @@
+import statsmodels.api as sm
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.linalg import hankel
+from scipy.optimize import minimize
+from scipy.interpolate import interp1d
+
+from Izhikevich import *
+from plotting import plot_design_matrix, plot_glm_matrices, plot_kernels, plot_matrix
+
+plt.style.use("https://raw.githubusercontent.com/NeuromatchAcademy/course-content/main/nma.mplstyle")
+
+plot_path = "/Users/tom/Imbizo/Week_03/izhikevich-neuron/plots/tonic_spiking"
+np.random.seed(87931)
+
+
+# defining the nlp-GLM
+def neg_log_like_lnp(theta, X, y, log_offset=1e-9):
+    """calculate the loglikihood for linear non-linear poisson process
+    LL = ylog(lambda) - lambda - log(y!)
+
+    Args:
+        theta (array): array of parameters
+        X (array): stimulus inputs
+        y (array): spike counts
+        log_offset (float): offset to stop log 0 blowing up
+
+    Returns:
+        float: log likelihood
+    """
+    rate = np.exp(X@theta + log_offset)
+    log_likihood = np.sum(y @ np.log(rate) - rate)
+    return -log_likihood
+
+
+def fit_lnp(stim, spikes, n_stim_filter=25, n_hist_filter=25):
+    # Build the design matrix
+    y = spikes
+    constant = np.ones_like(y)
+    X = np.column_stack([constant, make_stim_design_matrix(stim, n_stim_filter), make_history_matrix(y, n_hist_filter)])
+
+    # Use a random vector of weights to start (mean 0, sd .2)
+    x0 = np.random.normal(0, .6, n_stim_filter+n_hist_filter+1)
+
+    # Find parameters that minmize the negative log likelihood function
+    res = minimize(neg_log_like_lnp, x0, args=(X, y))
+    
+    return res['x']
+
+
+def calc_aic(theta, X, y, n_filter):
+    LL_expGLM = neg_log_like_lnp(theta, X, y)
+    AIC_expGLM = -2*LL_expGLM + 2*(1+n_filter)
+    return AIC_expGLM
+
+
+def make_stim_design_matrix(stim, n_filter=6):
+    """make a stimulus design matrix based on current input I`
+
+    Args:
+        stim (array): current input
+        n_filter (int, optional): size of filter kernel. Defaults to 6.
+
+    Returns:
+        array: design matrix shape (stim x filter)
+    """
+    padded_stim = np.hstack([np.zeros(n_filter-1), stim])
+    design_stim_matrix = hankel(padded_stim[:-n_filter+1], stim[-n_filter:])
+    return design_stim_matrix
+
+
+def make_history_matrix(spike_count, n_filter=5, n_lags=1):
+    """make a history dependent design matrix based on input spike counts
+
+    Args:
+        spike_count (array): past spike counts
+        n_filter (int, optional): size of kernel. Defaults to 5.
+        n_lags (int, optional): numberof timesteps in past. Defaults to 1.
+
+    Returns:
+        array: design matrix shape (stim x filter)
+    """
+    padded_spike_count = np.hstack([np.zeros(n_filter-1+n_lags), spike_count[:-n_lags]])
+    design_hist_matrix = hankel(padded_spike_count[:-n_filter+1], spike_count[-n_filter:])
+    return design_hist_matrix
+
+
+if main == "__main__":
+    # define time params and initial conditions
+    T = 100000 # units ms
+    dt = 0.1
+    N = int(T/dt)
+    time = Time(T=T, tt=np.arange(0,T, dt), dt=dt)
+    x0 = np.array([-70, -14]) # initial state
+    
+    bin_size=5000
+    # generate spikes
+    dynamics = generate_izhikevich(x0, behaviour_types['tonic spiking'], time, 
+                                        bin_size=bin_size, I_func=set_rand_step_I2,
+                                        name="Tonic Spiking",)
+    
+    # define kernels
+    n_filter = 10
+    n_hist_filter = 9
+    
+    # design matrix
+    design_stim_matrix = make_stim_design_matrix(stim=dynamics.I[::dynamics.bin_wid], n_filter=n_filter)
+    design_hist_matrix = make_history_matrix(dynamics.spike_counts, 
+                                            n_filter=n_hist_filter, n_lags=1)
+    design_matrix = np.concatenate([design_stim_matrix, design_hist_matrix], axis=1)
+    
+    plot_design_matrix(design_matrix, dynamics)
+    
+    # add offsets
+    design_matrix_offset = np.hstack((np.ones((len(dynamics.I[::dynamics.bin_wid]),1)), design_matrix))
+    
+    # fit GLM
+    theta_lnp = fit_lnp(dynamics.I[::dynamics.bin_wid], dynamics.spike_counts, n_stim_filter=n_filter, n_hist_filter=n_hist_filter)
+    
+    # extract params
+    glm_const = theta_lnp[0]
+    glm_filter_stim = theta_lnp[1:n_filter+1]
+    glm_filter_hist = theta_lnp[-n_hist_filter:]
+
+    plot_kernels(glm_filter_stim, glm_filter_hist)
+
+    # predict rates
+    rate_pred_pGLM = np.exp(glm_const + design_matrix @ theta_lnp[1:])
+    plot_prediction(dynamics, rate_pred_pGLM)
+
+
+        
+    pass
