@@ -95,13 +95,18 @@ You have a set of $Y=\{y_{i}\}$ representing the number of spikes at time $t=i$ 
 To fit the GLM to spiking data we want our parameterised distribution $P_{\theta}(y|x)≈P(y|x)$. This is acheived by finding $\theta$ which maximises our likelihood $P(Y |X, \theta)$.
 
 As each event is assumed to be conditionally independent we can factorise the likelihood probability which yield,
-$$P(Y|X,\theta) = ∏^{N}_{i=1}P(y_{i}|x_{i}, \theta)$$
+
+$$
+\begin{equation}
+P(Y|X,\theta) = \prod^{N}_{i=1} P(y_{i}|x_{i}, \theta)
+\end{equation}
+$$
 
 Taking the log of the likelihood will speed up convergence an also reduces the complexity of the analytical solution.
 
 $$
 \begin{equation}
-Log(P(Y|X,\theta)) = ∑^{N}_{i=1}y_{i}log(\lambda_{i}) -\lambda_{i} -log(y_{t}!)
+Log(P(Y|X,\theta)) = \sum^{N} _{i=1} y_{i}log(\lambda_{i}) -\lambda_{i} -log(y_{t}!)
 \end{equation}
 $$
 
