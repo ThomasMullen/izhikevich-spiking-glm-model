@@ -33,3 +33,8 @@ Take the log like... to speed up convergence
 ![Generated data](/imgs/simulated_plot.svg "Generated data from the inferred filters of the glm")
 
 ## Acknowledgements
+Work was based on Weber, A. & Pillow, J. 2017
+
+Weber, A. I., & Pillow, J. W. (2017). Capturing the Dynamical Repertoire of Single Neurons with Generalized Linear Models. In Neural Computation (Vol. 29, Issue 12, pp. 3260–3289). MIT Press - Journals. https://doi.org/10.1162/neco_a_01021
+
+Izhikevich, E. M. (2003). Simple model of spiking neurons. In IEEE Transactions on Neural Networks (Vol. 14, Issue 6, pp. 1569–1572). Institute of Electrical and Electronics Engineers (IEEE). https://doi.org/10.1109/tnn.2003.820440
