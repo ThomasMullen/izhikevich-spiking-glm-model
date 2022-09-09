@@ -98,7 +98,7 @@ As each event is assumed to be conditionally independent we can factorise the li
 
 $$
 \begin{equation}
-P(Y|X,\theta) = \prod^{N}_{i=1} P(y_{i}|x_{i}, \theta)
+P(Y|X,\theta) = \prod_{i}^{N} P(y_{i}|x_{i}, \theta)
 \end{equation}
 $$
 
@@ -106,7 +106,7 @@ Taking the log of the likelihood will speed up convergence an also reduces the c
 
 $$
 \begin{equation}
-Log(P(Y|X,\theta)) = \sum^{N} _{i=1} y_{i}log(\lambda_{i}) -\lambda_{i} -log(y_{t}!)
+Log(P(Y|X,\theta)) = \sum_{i}^{N} y_{i}log(\lambda_{i}) -\lambda_{i} -log(y_{t}!)
 \end{equation}
 $$
 
