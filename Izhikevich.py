@@ -8,7 +8,7 @@ from functools import partial
 from misc import *
 from plotting import plot_generated_data
 
-# plt.style.use("https://raw.githubusercontent.com/NeuromatchAcademy/course-content/main/nma.mplstyle")
+plt.style.use("https://raw.githubusercontent.com/ThomasMullen/izhikevich-spiking-glm-model/master/fig_format.mplstyle")
 
 np.random.seed(1234)
 

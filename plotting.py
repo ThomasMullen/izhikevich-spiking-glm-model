@@ -3,7 +3,7 @@ import numpy as np
 
 from misc import *
 
-# plt.style.use("https://raw.githubusercontent.com/NeuromatchAcademy/course-content/main/nma.mplstyle")
+plt.style.use("https://raw.githubusercontent.com/ThomasMullen/izhikevich-spiking-glm-model/master/fig_format.mplstyle")
 
 def plot_generated_data(dynamics: Dynamics, filename: str =None):
   """plot 4 row plot fast V dynamics of Izkevich neuron, slow U dynamics, 

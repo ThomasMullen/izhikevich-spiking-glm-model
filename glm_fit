@@ -9,7 +9,7 @@ from misc import *
 from Izhikevich import *
 from plotting import plot_design_matrix, plot_kernels, plot_prediction, plot_generated_data
 
-plt.style.use("https://raw.githubusercontent.com/NeuromatchAcademy/course-content/main/nma.mplstyle")
+plt.style.use("https://raw.githubusercontent.com/ThomasMullen/izhikevich-spiking-glm-model/master/fig_format.mplstyle")
 
 plot_path = "/Users/tom/Imbizo/Week_03/izhikevich-neuron/plots/tonic_spiking"
 np.random.seed(87931)
