@@ -5,10 +5,10 @@ from mpl_toolkits import mplot3d
 import numpy as np
 from collections import namedtuple
 from functools import partial
-
+from misc import *
 from plotting import plot_generated_data
 
-plt.style.use("https://raw.githubusercontent.com/NeuromatchAcademy/course-content/main/nma.mplstyle")
+# plt.style.use("https://raw.githubusercontent.com/NeuromatchAcademy/course-content/main/nma.mplstyle")
 
 np.random.seed(1234)
 
@@ -158,9 +158,6 @@ def set_step_I(I0, tt):
     
     return I[:_len]
 
-
-# Define different behaviour conditions
-PhaseParams = namedtuple("PhaseParams", ['a', 'b', 'c', 'd', 'I0'])
 behaviour_types={
     "tonic spiking" : PhaseParams(a=0.02, b=0.2, c=-65, d=6, I0=14),
     "phasic spiking" : PhaseParams(0.02, 0.25, -65, 6, 0.5),
@@ -180,11 +177,6 @@ behaviour_types={
     "bistability II" : PhaseParams(1.02, 1.5, -60, 0, 26.1),
     }
 
-# define time params
-Time = namedtuple("Time", ["T", "tt", "dt"])
-
-# define dynamics class
-Dynamics = namedtuple("Dynamics", ["tt", "V", "U", "I", "spike_times", "spike_events", "spike_counts", "tt_sample", "bin_wid"])
 
 
 def generate_izhikevich(x_init, params, time_params, bin_size=5000, I=None, I_func=set_rand_step_I2, show_plt=False, filename=None, name="", **kwargs):
@@ -194,7 +186,10 @@ def generate_izhikevich(x_init, params, time_params, bin_size=5000, I=None, I_fu
                                    dt=time_params.dt, timesteps=time_params.tt, I=I, c=params.c,
                                    d= params.d, a=params.a, b=params.b)
     # bin and calculate spikes
-    assert int(len(I) * bin_size)==spike_events.size, "Bin size must factor in stimulus len"
+    assert (len(I)//bin_size)*bin_size==spike_events.size, f"Bin size must factor in "\
+                                                            "stimulus len. I: {I.size},"\
+                                                            " bin width: {bin_size}, spike "\
+                                                            "event size: {spike_events.size}."
     spike_count = spike_events.reshape(int(len(I)// bin_size), bin_size).sum(axis=1)
     # time_seqs = np.r_[time_params.tt[::bin_size], time_params.tt[-1]+(dt*bin_size)]
     # spike_count = np.histogram(spike_times, time_seqs)[0]

@@ -1,12 +1,13 @@
-import statsmodels.api as sm
+# import statsmodels.api as sm
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import hankel
 from scipy.optimize import minimize
 from scipy.interpolate import interp1d
 
+from misc import *
 from Izhikevich import *
-from plotting import plot_design_matrix, plot_glm_matrices, plot_kernels, plot_matrix
+from plotting import plot_design_matrix, plot_kernels, plot_prediction, plot_generated_data
 
 plt.style.use("https://raw.githubusercontent.com/NeuromatchAcademy/course-content/main/nma.mplstyle")
 
@@ -99,6 +100,8 @@ if main == "__main__":
                                         bin_size=bin_size, I_func=set_rand_step_I2,
                                         name="Tonic Spiking",)
     
+    plot_generated_data(dynamics)
+    
     # define kernels
     n_filter = 10
     n_hist_filter = 9
@@ -125,9 +128,10 @@ if main == "__main__":
     plot_kernels(glm_filter_stim, glm_filter_hist)
 
     # predict rates
-    rate_pred_pGLM = np.exp(glm_const + design_matrix @ theta_lnp[1:])
+    # rate_pred_pGLM = np.exp(glm_const + design_matrix @ theta_lnp[1:])
+    rate_pred_pGLM = np.exp(design_matrix @ theta_lnp[1:])
     plot_prediction(dynamics, rate_pred_pGLM)
 
 
         
-    pass
+    

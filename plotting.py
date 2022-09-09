@@ -1,8 +1,9 @@
-from fcntl import F_GET_SEALS
 import matplotlib.pyplot as plt
 import numpy as np
 
-from Izhikevich import Dynamics, Time
+from misc import *
+
+# plt.style.use("https://raw.githubusercontent.com/NeuromatchAcademy/course-content/main/nma.mplstyle")
 
 def plot_generated_data(dynamics: Dynamics, filename: str =None):
   """plot 4 row plot fast V dynamics of Izkevich neuron, slow U dynamics, 
@@ -20,10 +21,10 @@ def plot_generated_data(dynamics: Dynamics, filename: str =None):
   ax2.set_ylabel("U")
   ax3.plot(dynamics.tt, dynamics.I, lw=1)
   ax3.set_ylabel("I")
-  markerline,stemlines,baseline = ax4.stem(dynamics.tt[::dynamics.bin_size], dynamics.spike_counts)
-  ax4.setp(markerline, 'markerfacecolor', 'none')
-  ax4.setp(stemlines, color='b', linewidth=.5)
-  ax4.setp(baseline, color='b', linewidth=.5)
+  markerline,stemlines,baseline = ax4.stem(dynamics.tt[::dynamics.bin_wid], dynamics.spike_counts)
+  markerline.set_markerfacecolor('none')
+  stemlines.set(color='b', linewidth=.5)
+  baseline.set(color='b', linewidth=.5)
   ax4.set_ylabel("Bin spikes")
   ax4.set_xlabel("Time [ms]")
   # fig.suptitle(f"")
@@ -46,10 +47,11 @@ def plot_design_matrix(design_mat: np.ndarray, dynamics: Dynamics, filename: str
   xlabel="regressors",
   ylabel="Time point (time bins)",
   )
-  ax2.imshow(dynamics.spike_counts[:,np.newaxis], aspect='auto', interpolation='nearest')
-  ax1.set(
-  ylabel="spike counts",
-  )
+  cbar = ax2.imshow(dynamics.spike_counts[:,np.newaxis], aspect='auto', interpolation='nearest')
+  fig.colorbar(cbar, ax=ax2)
+  # ax.set(
+  # ylabel="spike counts",
+  # )
   fig.tight_layout()
   if filename is not None:
     fig.savefig(f"{filename}.svg")
