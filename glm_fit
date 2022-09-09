@@ -131,7 +131,3 @@ if main == "__main__":
     # rate_pred_pGLM = np.exp(glm_const + design_matrix @ theta_lnp[1:])
     rate_pred_pGLM = np.exp(design_matrix @ theta_lnp[1:])
     plot_prediction(dynamics, rate_pred_pGLM)
-
-
-        
-    

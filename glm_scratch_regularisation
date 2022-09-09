@@ -1,0 +1,261 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.linalg import hankel
+from scipy.optimize import minimize
+from Izhikevich import *
+
+plt.style.use("https://raw.githubusercontent.com/ThomasMullen/izhikevich-spiking-glm-model/master/fig_format.mplstyle")
+
+def make_stim_design_matrix(stim, n_filter=6):
+    """make a stimulus design matrix based on current input I`
+
+    Args:
+        stim (array): current input
+        n_filter (int, optional): size of filter kernel. Defaults to 6.
+
+    Returns:
+        array: design matrix shape (stim x filter)
+    """
+    padded_stim = np.hstack([np.zeros(n_filter-1), stim])
+    design_stim_matrix = hankel(padded_stim[:-n_filter+1], stim[-n_filter:])
+    return design_stim_matrix
+
+
+def make_history_matrix(spike_count, n_filter=15, n_lags=1):
+    """make a history dependent design matrix based on input spike counts
+
+    Args:
+        spike_count (array): past spike counts
+        n_filter (int, optional): size of kernel. Defaults to 5.
+        n_lags (int, optional): numberof timesteps in past. Defaults to 1.
+
+    Returns:
+        array: design matrix shape (stim x filter)
+    """
+    padded_spike_count = np.hstack([np.zeros(n_filter-1+n_lags), spike_count[:-n_lags]])
+    design_hist_matrix = hankel(padded_spike_count[:-n_filter+1], spike_count[-n_filter:])
+    return design_hist_matrix
+
+
+tonic_spiking = behaviour_types['tonic spiking']
+
+T = 100000 # units ms
+dt = 0.1
+N = int(T/dt)
+time = Time(T=T, tt=np.arange(0,T, dt), dt=dt)
+x0 = np.array([-70, -14]) # initial state
+
+# define stim
+n_steps = 20000
+periods = np.random.randint(400, 5000, n_steps)
+amplitudes = np.random.randint(0,2, n_steps)*tonic_spiking.I0
+# amplitudes = np.random.rand(n_steps)*tonic_spiking.I0
+I = np.repeat(amplitudes, periods)
+_len = len(time.tt)
+I = I[:_len]
+
+ix = int(_len//16)
+I[-ix:] = 0
+I[:ix] = 0
+stim=I
+
+# generate dyamics
+v, u, spike_events, spike_times = euler_integrate(x0, Izhikevich, time.dt, 
+                                                  time.tt, stim, c=-60, d= 6, 
+                                                  a=tonic_spiking.a, 
+                                                  b=tonic_spiking.b)
+
+# calculate bin count
+bin_size=100
+spike_count = spike_events.reshape(int(len(stim)// bin_size), bin_size).sum(axis=1)
+time_seqs = np.r_[time.tt[::bin_size], time.tt[-1]+(dt*bin_size)]
+
+# plot
+fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(8,5), sharex=True)
+ax1.plot(time.tt, v)
+ax1.scatter(spike_times, np.full_like(spike_times, 40))
+ax1.set_ylabel("V")
+ax2.plot(time.tt, u)
+ax2.set_ylabel("U")
+ax3.plot(time.tt, I)
+ax3.set_ylabel("I")
+ax3.set_xlabel("Time")
+ax4.stem(time_seqs[:-1], spike_count)
+ax4.set_ylabel("Bin spikes")
+ax4.set_xlabel("Time")
+
+fig.tight_layout()
+
+
+# split into train-test 80:20
+train_frac = .8  # fraction of data to use for training
+num_train = int(np.ceil(len(time.tt)*train_frac))  # number of training samples
+num_test = len(time.tt)-num_train # number of test samples
+iitest = np.arange(num_test) # time indices for test
+iitrain = np.arange(num_test,len(time.tt))   # time indices for training
+stim_train = stim[iitrain] # training stimulus
+stim_test = stim[iitest] # test stimulus
+binned_spikes_train =  spike_count[int(num_test/bin_size):]
+binned_spikes_test = spike_count[:int(num_test/bin_size)]
+
+
+# Build design matrix for test and train data
+n_filter=18
+n_hist_filt=9
+design_mat_train = make_stim_design_matrix(stim=stim_train[::bin_size], n_filter=n_filter)
+hist_mat_train = make_history_matrix(binned_spikes_train, n_filter=n_hist_filt, n_lags=1)
+design_mat_test = make_stim_design_matrix(stim=stim_test[::bin_size], n_filter=n_filter)
+hist_mat_test = make_history_matrix(binned_spikes_test, n_filter=n_hist_filt, n_lags=1)
+
+# plot
+fig, (ax1, ax2) = plt.subplots(
+    ncols=2,
+    figsize=(6, 8),
+    sharey=True,
+    gridspec_kw=dict(width_ratios=(5, 1)),
+)
+ax1.imshow(design_mat_train, aspect='auto', interpolation='nearest')
+ax1.set(
+title="Design matrix with history",
+xlabel="regressors",
+ylabel="Time point (time bins)",
+)
+ax2.imshow(binned_spikes_train[:,np.newaxis], aspect='auto', interpolation='nearest')
+ax1.set(
+ylabel="spike counts",
+)
+fig.tight_layout()
+plt.show()
+
+design_mat_train = np.hstack((np.ones((len(stim_train[::bin_size]),1)), design_mat_train, hist_mat_train))
+design_mat_test = np.hstack((np.ones((len(stim_test[::bin_size]),1)), design_mat_test))
+
+
+# plot spike trigger average
+sta = (design_mat_train.T @ binned_spikes_train)/np.sum(binned_spikes_train) # compute STA for initialization
+
+ttk = np.arange(-n_filter+1,1)*time.dt*bin_size  # time bins for STA (in seconds)
+plt.clf()
+plt.figure(figsize=[12,8])
+plt.plot(ttk,ttk*0, 'k--')
+plt.plot(ttk, sta[1:-n_hist_filt].T, 'bo-')
+# plt.plot(ttk, sta.T, 'bo-')
+plt.title('STA')
+plt.xlabel('time before spike (ms)')
+plt.xlim([ttk[0],ttk[-1]])
+plt.show()
+
+
+# defining the nlp-GLM
+def neglogli_poissGLM(thetas, xx, yy, dt_bin, vals_to_return=3):
+    """ Compute negative log-likelihood of data under Poisson GLM model with
+        exponential nonlinearity.
+        
+        Args
+        ----
+        thetas: ndarray (d X 1)
+            parameter vector
+        xx: ndarray (T X d)
+            design matrix
+        yy: ndarray (T X 1)
+            response variable (spike count per time bin)
+        dt_bin: float
+            time bin size used
+        vals_to_return: int
+            which of negative log-likelihood (0), gradient (1), or hessian (2) to return.
+            (3) returns all three values. This is necessary due to scipy.optimize.minimize
+            requiring the three separate functions with a single return value for each.
+            
+        Returns
+        -------
+        neglogli: float
+            negative log likelihood of spike train
+        dL: ndarray (d X 1)
+            gradient
+        H: ndarray (d X d)
+            Hessian (second derivative matrix)
+    """
+    
+    # Compute GLM filter output and conditional intensity
+    vv = xx @ thetas # filter output
+    rr = np.exp(vv) * dt_bin # conditional intensity (per bin)
+
+    # ---------  Compute log-likelihood -----------
+    Trm1 = -vv.T @ yy; # spike term from Poisson log-likelihood
+    Trm0 = np.sum(rr)  # non-spike term 
+    neglogli = Trm1 + Trm0
+    
+    # ---------  Compute Gradient -----------------
+    dL1 = -xx.T @ yy # spiking term (the spike-triggered average)
+    dL0 = xx.T @ rr # non-spiking term
+    dL = dL1 + dL0
+    
+    # ---------  Compute Hessian -------------------
+    H = xx.T @ (xx * np.transpose([rr])) # non-spiking term
+    
+    if vals_to_return == 3:
+        return neglogli, dL, H
+    else:
+        return [neglogli, dL, H][vals_to_return]
+    
+    
+# -- Make loss functions and minimize -----
+loss_func = lambda prs : neglogli_poissGLM(prs, design_mat_train, binned_spikes_train, time.dt, vals_to_return=0)
+grad_func = lambda prs : neglogli_poissGLM(prs, design_mat_train, binned_spikes_train, time.dt, vals_to_return=1)
+hess_func = lambda prs : neglogli_poissGLM(prs, design_mat_train, binned_spikes_train, time.dt, vals_to_return=2)
+optimizer = minimize(fun=loss_func, x0=sta, method='trust-ncg', jac=grad_func, hess=hess_func, options={'disp':True, 'gtol':1e-6, 'maxiter': 7})
+filt_ML = optimizer.x
+
+    
+    
+    
+def fit_lnp(stim, spikes, n_filter=25):
+    # Build the design matrix
+    y = spikes
+    constant = np.ones_like(y)
+    X = np.column_stack([constant, make_stim_design_matrix(stim, n_filter)])
+
+    # Use a random vector of weights to start (mean 0, sd .2)
+    x0 = np.random.normal(0, .6, n_filter+1)
+
+    # Find parameters that minmize the negative log likelihood function
+    res = minimize(neg_log_like_lnp, x0, args=(X, y))
+    
+    return res['x']
+
+def calc_aic(theta, X, y, n_filter):
+    LL_expGLM = neg_log_like_lnp(theta, X, y)
+    AIC_expGLM = -2*LL_expGLM + 2*(1+n_filter)
+    return AIC_expGLM
+
+
+def predict_spike_counts_lnp(stim, spikes, theta=None, d=25):
+  """Compute a vector of predicted spike counts given the stimulus.
+
+  Args:
+    stim (1D array): Stimulus values at each timepoint
+    spikes (1D array): Spike counts measured at each timepoint
+    theta (1D array): Filter weights; estimated if not provided.
+    d (number): Number of time lags to use.
+
+  Returns:
+    yhat (1D array): Predicted spikes at each timepoint.
+
+  """
+  y = spikes
+  constant = np.ones_like(spikes)
+  X = np.column_stack([constant, make_stim_design_matrix(stim)])
+  if theta is None:  # Allow pre-cached weights, as fitting is slow
+    theta = fit_lnp(X, y, d)
+
+  yhat = np.exp(X@theta)
+  return yhat
+
+
+theta_lnp = fit_lnp(stim[::bin_size], spike_count, n_filter=n_filter)
+
+# plot fitted filter
+fig, ax = plt.subplots()
+ax.plot(theta_lnp/np.linalg.norm(theta_lnp), 'o-', label='poisson GLM stil filt', c='r')
+ax.plot(theta_lnp*0, linestyle='--', c='k')
+
