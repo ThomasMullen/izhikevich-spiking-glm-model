@@ -53,15 +53,31 @@ This returns a Struct dynamics which characterizes the dynamics, time, and spike
 ## Recurrent Linear-Nonlinear Poisson model
 
 Assume spike count, $y$, follows a **Poisson Distribution**, which is parametrized by a firing rate, $\lambda$. So,
-$$y_{t} | x_{t} \sim Poiss(\lambda)$$
+
+$$
+\begin{equation}
+y_{t} | x_{t} \sim Poiss(\lambda)
+\end{equation}
+$$
+
+
 where the distribution of an event is defined as
-$$ P(y|x, \theta) = \frac{1}{y!}\lambda^{y}e^{-\lambda} .$$
+
+$$ 
+\begin{equation}
+P(y|x, \theta) = \frac{1}{y!}\lambda^{y}e^{-\lambda} .
+\end{equation}
+$$
 
 The count rate $\lambda$ is encoded by a **linear** combination of the stimulus filter $f$ and the history filter $h$. The history filter provides a **recurrent** feedback to the Poisson spike generator. The stimulus filter describes how the time history of the stimulus affects the spike generator. So theta is a combination $\theta = [f, h]^T$.
 
 To ensure the encoded lambda is positive we pass the encoded stimulus and history through an exponential **non-linearity** function. Therefore,
-$$\lambda = f(\theta x) = e^{\theta x}.$$
 
+$$
+\begin{equation}
+\lambda = f(\theta x) = e^{\theta x}.
+\end{equation}
+$$
 
 
 ## Building a design matrix
@@ -82,12 +98,28 @@ As each event is assumed to be conditionally independent we can factorise the li
 $$P(Y|X,\theta) = ∏^{N}_{i=1}P(y_{i}|x_{i}, \theta)$$
 
 Taking the log of the likelihood will speed up convergence an also reduces the complexity of the analytical solution.
-$$Log(P(Y|X,\theta)) = ∑^{N}_{i=1}y_{i}log(\lambda_{i}) -\lambda_{i} -log(y_{t}!)$$
+
+$$
+\begin{equation}
+Log(P(Y|X,\theta)) = ∑^{N}_{i=1}y_{i}log(\lambda_{i}) -\lambda_{i} -log(y_{t}!)
+\end{equation}
+$$
+
 and in the recurrent linear-nonlinear Poisson model,
-$$\lambda_{i} = e^{x_{i}^{T}\theta}$$
+
+$$
+\begin{equation}
+\lambda_{i} = e^{x_{i}^{T}\theta}
+\end{equation}
+$$
 
 To find the maxima we take the derivative with respect to the $\theta$ which reduces to,
-$$\partial_{\theta} Log(P(Y|X,\theta)) = YX^{T} - X^{T}e^{X^{T}\theta}.$$
+
+$$
+\begin{equation}
+\partial_{\theta} Log(P(Y|X,\theta)) = YX^{T} - X^{T}e^{X^{T}\theta}.
+\end{equation}
+$$
 
 ![Filters](/imgs/filters.svg "Inferred filters of the glm")
 
